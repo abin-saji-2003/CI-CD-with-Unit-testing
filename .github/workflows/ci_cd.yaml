@@ -72,11 +72,13 @@ jobs:
           name: app-binary
           path: ./
 
-      - name: Set up SSH keys
+      - name: Set up SSH keys with ssh-agent
         run: |
           mkdir -p ~/.ssh  # Ensure the .ssh directory exists
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/id_rsa
           echo "Host *" >> ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config
           echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
@@ -87,27 +89,14 @@ jobs:
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
           echo "Starting deployment..."
-
-          # SSH into server, navigate to the app directory, and update the code
           ssh -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
             set -e
             echo "Navigating to the project directory..."
             cd /home/ubuntu/CI-CD-with-Unit-testing
-
-            # Pull the latest code and install dependencies
-            echo "Pulling latest code..."
             git pull origin main
-            echo "Running go mod tidy..."
             go mod tidy
-            echo "Building the app..."
             go build -o app ./cmd/main.go
-
-            # Run tests on the server
-            echo "Running tests on the server..."
             go test ./... -v
-
-            # Stop the running app (if any)
-            echo "Stopping the app..."
             sudo systemctl stop app || echo "Service not running"
           EOF
 
@@ -116,7 +105,6 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Deploying the new binary to server..."
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
 
       - name: Restart application on server
@@ -124,7 +112,6 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Starting the app..."
           ssh -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start app"
 
       - name: Verify Deployment
