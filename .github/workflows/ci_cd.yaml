@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.21  
 
       - name: Install dependencies
         run: go mod tidy
@@ -56,63 +56,44 @@ jobs:
           path: app
 
   deploy:
+    name: Deploy Application
     runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.ref == 'refs/heads/main'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # Step 1: Setup SSH Key
-      - name: Setup SSH Key
-        env:
-          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          echo "$SSH_KEY" | base64 --decode > s.pem
-          chmod 400 s.pem
+      - name: Install SSH client
+        run: sudo apt-get install -y openssh-client
 
-      # Step 2: Connect to EC2 and Pull Latest Code
-      - name: Pull Latest Code from Git
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: app-binary
+          path: .
+
+      - name: Create .ssh directory
+        run: mkdir -p ~/.ssh
+
+      - name: Deploy to Server
         env:
-          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SERVER_IP: ${{ secrets.SERVER_IP }}
+          USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          ssh -i s.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << 'EOF'
-            echo "Current directory content:"
-            ls -al /home/ubuntu/CI-CD-with-Unit-testing
-            cd /home/ubuntu/CI-CD-with-Unit-testing
-            git pull origin main
-          EOF
+          echo "Starting deployment..."
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-      # Step 3: Build Go Application
-      - name: Testing and Building Go Application
-        env:
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-        run: |
-          ssh -i s.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << 'EOF'
-            # Update system packages
-            sudo apt update
-            sudo apt install -y golang-go
+          echo "Stopping the app..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop app || echo 'Service not running'"
 
-            # Verify Go installation
-            go version
+          echo "Deploying new binary..."
+          scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
 
-            # Navigate to the project directory and build the app
-            cd /home/ubuntu/CI-CD-with-Unit-testing
-            go mod tidy
-            go test ./... -v
-            go build -o app ./cmd/main.go
-          EOF
+          echo "Starting the app..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start app"
 
-      # Step 4: Restart Application Service
-      - name: Restart Application Service
-        env:
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-        run: |
-          ssh -i s.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << 'EOF'
-            echo "Restarting application service..."
-            sudo systemctl restart app
-          EOF
-
-      # Step 5: Cleanup SSH Key
-      - name: Cleanup
-        run: |
-          rm -f s.pem
+      - name: Verify Deployment
+        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "systemctl status app --no-pager"
