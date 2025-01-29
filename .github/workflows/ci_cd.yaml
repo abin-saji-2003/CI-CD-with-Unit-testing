@@ -87,13 +87,13 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
 
           echo "Stopping the app..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop app || echo 'Service not running'"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp || echo 'Service not running'"
 
           echo "Deploying new binary..."
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
 
           echo "Starting the app..."
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start app"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start myapp"
 
       - name: Verify Deployment
-        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "systemctl status app --no-pager"
+        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "systemctl status myapp --no-pager"
