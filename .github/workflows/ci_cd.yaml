@@ -73,40 +73,6 @@ jobs:
           name: app-binary
           path: .
 
-      - name: List downloaded artifacts
-        run: ls -l
-
-      - name: Check if environment variables are set
-        env:
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          if [ -z "${{ secrets.SERVER_IP }}" ]; then
-            echo "SERVER_IP environment variable is not set. Exiting."
-            exit 1
-          fi
-          if [ -z "${{ secrets.SERVER_USER }}" ]; then
-            echo "SERVER_USER environment variable is not set. Exiting."
-            exit 1
-          fi
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "SSH_PRIVATE_KEY environment variable is not set. Exiting."
-            exit 1
-          fi
-
-      - name: Add server to known hosts
-        run: |
-          echo "Adding server to known hosts..."
-          mkdir -p ~/.ssh
-          if ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts; then
-            echo "Server SSH key added to known hosts."
-          else
-            echo "Failed to add SSH key for ${{ secrets.SERVER_IP }}."
-            exit 1
-          fi
-          chmod 644 ~/.ssh/known_hosts
-
       - name: Deploy to Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -114,29 +80,17 @@ jobs:
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
           echo "Starting deployment..."
-
-          # Ensure SSH private key is available
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          echo "Testing SSH connection..."
-          # Test SSH connection
-          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "echo SSH connection established"
+          echo "Stopping the app..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp || echo 'Service not running'"
 
-          echo "Stopping the app and removing the old binary..."
-          # If the connection is successful, stop the app, remove the old binary
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp && rm -f /home/$USERNAME/app && exit"
-
-          echo "Copying new binary to the server..."
-          # Copy the new binary
+          echo "Deploying new binary..."
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
 
           echo "Starting the app..."
-          # Start the app
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start myapp"
 
-      - name: Verify Deployment Status
-        run: |
-          echo "Verifying deployment..."
-          # Check if the app is running
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "systemctl status myapp"
+      - name: Verify Deployment
+        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "systemctl status myapp --no-pager"
