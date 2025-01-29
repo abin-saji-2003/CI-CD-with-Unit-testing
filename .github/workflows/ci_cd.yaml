@@ -68,7 +68,13 @@ jobs:
         run: sudo apt-get install -y openssh-client
 
       - name: Check SERVER_IP value
-        run: echo "SERVER_IP: $SERVER_IP"
+        run: |
+          echo "SERVER_IP: $SERVER_IP"
+          # Ensure SERVER_IP is set
+          if [ -z "$SERVER_IP" ]; then
+            echo "SERVER_IP is not set."
+            exit 1
+          fi
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -76,10 +82,13 @@ jobs:
           name: app-binary
           path: .
 
+      - name: List downloaded artifacts
+        run: ls -l
+
       - name: Add server to known hosts
         run: |
+          echo "Adding server to known hosts..."
           mkdir -p ~/.ssh
-          # Run ssh-keyscan to add the server's SSH key to known_hosts
           if ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts; then
             echo "Server SSH key added to known hosts."
           else
@@ -94,14 +103,30 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
+          echo "Starting deployment..."
+
           # Ensure SSH private key is available
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Check SSH connection
+          echo "Testing SSH connection..."
+          # Test SSH connection
           ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "echo SSH connection established"
 
-          # If the connection is successful, deploy the application
+          echo "Stopping the app and removing the old binary..."
+          # If the connection is successful, stop the app, remove the old binary
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp && rm -f /home/$USERNAME/app && exit"
+
+          echo "Copying new binary to the server..."
+          # Copy the new binary
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
+
+          echo "Starting the app..."
+          # Start the app
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start myapp"
+
+      - name: Verify Deployment Status
+        run: |
+          echo "Verifying deployment..."
+          # Check if the app is running
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "systemctl status myapp"
