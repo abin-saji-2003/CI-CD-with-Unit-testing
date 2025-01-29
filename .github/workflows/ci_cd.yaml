@@ -93,12 +93,11 @@ jobs:
             git pull origin main
           EOF
 
-          # Step 2: Ensure Go is in PATH and Install Dependencies
+          # Step 2: Explicitly add Go binary to PATH and Install Dependencies
           echo "Ensuring Go is in PATH and installing dependencies..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
-            # Ensure Go is in PATH
-            echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
-            source ~/.bashrc
+            # Explicitly add Go binary path
+            export PATH=$PATH:/usr/local/go/bin
 
             # Verify Go is available
             go version
