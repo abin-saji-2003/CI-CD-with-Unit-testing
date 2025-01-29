@@ -99,10 +99,10 @@ jobs:
         run: |
           echo "Adding server to known hosts..."
           mkdir -p ~/.ssh
-          if ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts; then
+          if ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts; then
             echo "Server SSH key added to known hosts."
           else
-            echo "Failed to add SSH key for $SERVER_IP."
+            echo "Failed to add SSH key for ${{ secrets.SERVER_IP }}."
             exit 1
           fi
           chmod 644 ~/.ssh/known_hosts
