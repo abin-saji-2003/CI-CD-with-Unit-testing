@@ -64,11 +64,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install SSH client
+        run: sudo apt-get install openssh-client
+
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
           name: app-binary
           path: .
+
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to Server
         env:
@@ -76,9 +85,28 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          mkdir -p ~/.ssh
+          # Check that necessary variables are not empty
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "SSH_PRIVATE_KEY is not set!"
+            exit 1
+          fi
+          if [ -z "$SERVER_IP" ]; then
+            echo "SERVER_IP is not set!"
+            exit 1
+          fi
+          if [ -z "$USERNAME" ]; then
+            echo "USERNAME is not set!"
+            exit 1
+          fi
+
+          # Ensure SSH private key is available
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh -o StrictHostKeyChecking=no $USERNAME@$SERVER_IP "sudo systemctl stop myapp && rm -f /home/$USERNAME/app && exit"
+
+          # Check SSH connection
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "echo SSH connection established"
+
+          # If the connection is successful, deploy the application
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp && rm -f /home/$USERNAME/app && exit"
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
-          ssh -o StrictHostKeyChecking=no $USERNAME@$SERVER_IP "sudo systemctl start myapp"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start myapp"
