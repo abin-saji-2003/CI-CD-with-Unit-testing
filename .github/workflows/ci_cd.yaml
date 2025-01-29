@@ -65,7 +65,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install SSH client
-        run: sudo apt-get install openssh-client
+        run: sudo apt-get install -y openssh-client
+
+      - name: Check SERVER_IP value
+        run: echo "SERVER_IP: $SERVER_IP"
 
       - name: Download binary
         uses: actions/download-artifact@v4
@@ -76,7 +79,13 @@ jobs:
       - name: Add server to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+          # Run ssh-keyscan to add the server's SSH key to known_hosts
+          if ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts; then
+            echo "Server SSH key added to known hosts."
+          else
+            echo "Failed to add SSH key for $SERVER_IP."
+            exit 1
+          fi
           chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to Server
@@ -85,20 +94,6 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
           USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          # Check that necessary variables are not empty
-          if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "SSH_PRIVATE_KEY is not set!"
-            exit 1
-          fi
-          if [ -z "$SERVER_IP" ]; then
-            echo "SERVER_IP is not set!"
-            exit 1
-          fi
-          if [ -z "$USERNAME" ]; then
-            echo "USERNAME is not set!"
-            exit 1
-          fi
-
           # Ensure SSH private key is available
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
