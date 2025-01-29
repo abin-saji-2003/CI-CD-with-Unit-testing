@@ -67,21 +67,6 @@ jobs:
       - name: Install SSH client
         run: sudo apt-get install -y openssh-client
 
-      - name: Check if environment variables are set
-        run: |
-          if [ -z "$SERVER_IP" ]; then
-            echo "SERVER_IP environment variable is not set. Exiting."
-            exit 1
-          fi
-          if [ -z "$SERVER_USER" ]; then
-            echo "SERVER_USER environment variable is not set. Exiting."
-            exit 1
-          fi
-          if [ -z "$SSH_PRIVATE_KEY" ]; then
-            echo "SSH_PRIVATE_KEY environment variable is not set. Exiting."
-            exit 1
-          fi
-
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
@@ -90,6 +75,25 @@ jobs:
 
       - name: List downloaded artifacts
         run: ls -l
+
+      - name: Check if environment variables are set
+        env:
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "${{ secrets.SERVER_IP }}" ]; then
+            echo "SERVER_IP environment variable is not set. Exiting."
+            exit 1
+          fi
+          if [ -z "${{ secrets.SERVER_USER }}" ]; then
+            echo "SERVER_USER environment variable is not set. Exiting."
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "SSH_PRIVATE_KEY environment variable is not set. Exiting."
+            exit 1
+          fi
 
       - name: Add server to known hosts
         run: |
