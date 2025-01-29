@@ -14,7 +14,7 @@ func SetupRouter(useCase usecase.UserUseCase) *gin.Engine {
 
 	userRoutes := r.Group("/users")
 	{
-		userRoutes.POST("/", handler.AddUser)
+		userRoutes.POST("", handler.AddUser)
 		userRoutes.GET("/:id", handler.GetUser)
 		userRoutes.PUT("/:id", handler.EditUser)
 		userRoutes.DELETE("/:id", handler.DeleteUser)
