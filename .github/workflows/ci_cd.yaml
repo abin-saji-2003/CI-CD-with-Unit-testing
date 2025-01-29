@@ -67,12 +67,18 @@ jobs:
       - name: Install SSH client
         run: sudo apt-get install -y openssh-client
 
-      - name: Check SERVER_IP value
+      - name: Check if environment variables are set
         run: |
-          echo "SERVER_IP: $SERVER_IP"
-          # Ensure SERVER_IP is set
           if [ -z "$SERVER_IP" ]; then
-            echo "SERVER_IP is not set."
+            echo "SERVER_IP environment variable is not set. Exiting."
+            exit 1
+          fi
+          if [ -z "$SERVER_USER" ]; then
+            echo "SERVER_USER environment variable is not set. Exiting."
+            exit 1
+          fi
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "SSH_PRIVATE_KEY environment variable is not set. Exiting."
             exit 1
           fi
 
