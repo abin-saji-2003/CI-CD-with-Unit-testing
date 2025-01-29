@@ -71,54 +71,42 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-binary
-          path: ./
+          path: .
 
-      - name: Set up SSH keys with ssh-agent
+      - name: Create .ssh directory
+        run: mkdir -p ~/.ssh
+
+      - name: Update system and prepare app
         run: |
-          mkdir -p ~/.ssh  # Ensure the .ssh directory exists
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          eval $(ssh-agent -s)
-          ssh-add ~/.ssh/id_rsa
-          echo "Host *" >> ~/.ssh/config
-          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-          echo "  UserKnownHostsFile=/dev/null" >> ~/.ssh/config
-
-      - name: Start Deployment
-        run: |
-          echo "Starting deployment..."
-          
-          # SSH into the server, pull latest changes, build, and test
-          ssh -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
-            set -e
-            echo "Navigating to the project directory..."
-            cd /home/ubuntu/CI-CD-with-Unit-testing
-
-            # Pull the latest code and install dependencies
-            echo "Pulling latest code..."
-            git pull origin main
-            echo "Running go mod tidy..."
-            go mod tidy
-            echo "Building the app..."
-            go build -o app ./cmd/main.go
-
-            # Run tests on the server
-            echo "Running tests on the server..."
-            go test ./... -v
-
-            # Stop the running app (if any)
-            echo "Stopping the app..."
-            sudo systemctl stop app || echo "Service not running"
-          EOF
+          echo "Updating system..."
+          sudo apt update
+          echo "Navigating to project directory..."
+          cd /home/ubuntu/CI-CD-with-Unit-testing
+          echo "Tidying Go modules..."
+          go mod tidy
+          echo "Running tests..."
+          go test ./... -v
+          echo "Building the application..."
+          go build -o app ./cmd/main.go
 
       - name: Deploy to Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SERVER_IP }}
+          USERNAME: ${{ secrets.SERVER_USER }}
         run: |
-          echo "Deploying new binary..."
-          scp app $USERNAME@$SERVER_IP:/home/ubuntu/app
+          echo "Starting deployment..."
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-          # Restart the app on the server
+          echo "Stopping the app..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop app || echo 'Service not running'"
+
+          echo "Deploying new binary..."
+          scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
+
           echo "Starting the app..."
-          ssh -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start app"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start app"
 
       - name: Verify Deployment
-        run: ssh -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "systemctl status app --no-pager"
+        run: ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "systemctl status app --no-pager"
