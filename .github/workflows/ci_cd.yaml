@@ -71,7 +71,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: app-binary
-          path: .
+          path: ./
 
       - name: Set up SSH keys with ssh-agent
         run: |
