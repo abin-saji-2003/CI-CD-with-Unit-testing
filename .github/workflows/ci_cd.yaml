@@ -93,9 +93,17 @@ jobs:
             git pull origin main
           EOF
 
-          # Step 2: Install Dependencies and Build
-          echo "Installing dependencies and building application..."
+          # Step 2: Ensure Go is in PATH and Install Dependencies
+          echo "Ensuring Go is in PATH and installing dependencies..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
+            # Ensure Go is in PATH
+            echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
+            source ~/.bashrc
+
+            # Verify Go is available
+            go version
+            
+            # Install dependencies and build
             cd /home/ubuntu/CI-CD-with-Unit-testing
             go mod tidy
             go build -o app ./cmd/main.go
