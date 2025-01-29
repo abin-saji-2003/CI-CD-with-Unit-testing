@@ -74,6 +74,8 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
           ssh -i s.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << 'EOF'
+            echo "Current directory content:"
+            ls -al /home/ubuntu/CI-CD-with-Unit-testing
             cd /home/ubuntu/CI-CD-with-Unit-testing
             git pull origin main
           EOF
@@ -88,7 +90,7 @@ jobs:
             # Update system packages
             sudo apt update
             sudo apt install -y golang-go
-            
+
             # Verify Go installation
             go version
 
@@ -106,6 +108,7 @@ jobs:
           SERVER_IP: ${{ secrets.SERVER_IP }}
         run: |
           ssh -i s.pem -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_IP << 'EOF'
+            echo "Restarting application service..."
             sudo systemctl restart app
           EOF
 
