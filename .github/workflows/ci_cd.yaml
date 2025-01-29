@@ -73,6 +73,9 @@ jobs:
           name: app-binary
           path: .
 
+      - name: Create .ssh directory
+        run: mkdir -p ~/.ssh
+
       - name: Deploy to Server
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
