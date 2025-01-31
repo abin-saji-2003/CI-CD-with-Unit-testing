@@ -86,14 +86,12 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Step 1: SSH into EC2 and Pull Latest Code
           echo "Pulling latest code from Git..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
             cd /home/ubuntu/CI-CD-with-Unit-testing
             git pull origin main
           EOF
 
-          # Step 2: Explicitly add Go binary to PATH and Install Dependencies
           echo "Ensuring Go is in PATH and installing dependencies..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP << 'EOF'
             # Explicitly add Go binary path
@@ -101,22 +99,18 @@ jobs:
 
             # Verify Go is available
             go version
-            
-            # Install dependencies and build
+
             cd /home/ubuntu/CI-CD-with-Unit-testing
             go mod tidy
             go build -o app ./cmd/main.go
           EOF
 
-          # Step 3: Stop Existing Service
           echo "Stopping the app..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl stop myapp || echo 'Service not running'"
 
-          # Step 4: Deploy New Binary
           echo "Deploying new binary..."
           scp app $USERNAME@$SERVER_IP:/home/$USERNAME/app
 
-          # Step 5: Start Application Service
           echo "Starting the app..."
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "sudo systemctl start myapp"
 

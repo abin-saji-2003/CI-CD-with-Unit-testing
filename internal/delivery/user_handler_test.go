@@ -50,7 +50,11 @@ func TestAddUser(t *testing.T) {
 func TestGetUser(t *testing.T) {
 	router, mockUseCase := setupRouter()
 
-	mockUser := &core.User{ID: 1, Name: "John Doe", Email: "johndoe@example.com"}
+	mockUser := &core.User{
+		ID:    1,
+		Name:  "John Doe",
+		Email: "johndoe@example.com",
+	}
 	mockUseCase.On("GetUser", uint(1)).Return(mockUser, nil)
 
 	req, _ := http.NewRequest("GET", "/users/1", nil)

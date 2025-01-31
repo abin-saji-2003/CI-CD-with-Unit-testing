@@ -31,7 +31,11 @@ func TestGetUser(t *testing.T) {
 	mockRepo := new(mocks.MockUserRepository)
 	mockUserUseCase := usecase.NewUserUseCase(mockRepo)
 
-	mockUser := &core.User{ID: 1, Name: "John Doe", Email: "johndoe@example.com"}
+	mockUser := &core.User{
+		ID:    1,
+		Name:  "John Doe",
+		Email: "johndoe@example.com",
+	}
 
 	mockRepo.On("GetUserByID", uint(1)).Return(mockUser, nil)
 
