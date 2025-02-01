@@ -45,34 +45,3 @@ func TestGetUser(t *testing.T) {
 	assert.Equal(t, mockUser, user)
 	mockRepo.AssertExpectations(t)
 }
-
-// func TestEditUser(t *testing.T) {
-
-// 	mockRepo := new(mocks.MockUserRepository)
-// 	mockUserUseCase := usecase.NewUserUseCase(mockRepo)
-
-// 	mockUser := &core.User{
-// 		ID:    1,
-// 		Name:  "John Doe Updated",
-// 		Email: "johndoe_updated@example.com",
-// 	}
-
-// 	mockRepo.On("UpdateUser", mockUser).Return(nil)
-
-// 	err := mockUserUseCase.EditUser(mockUser)
-
-// 	assert.NoError(t, err)
-// 	mockRepo.AssertExpectations(t)
-// }
-
-// func TestDeleteUser(t *testing.T) {
-// 	mockRepo := new(mocks.MockUserRepository)
-// 	mockUserUseCase := usecase.NewUserUseCase(mockRepo)
-
-// 	mockRepo.On("DeleteUser", uint(1)).Return(nil)
-
-// 	err := mockUserUseCase.DeleteUser(uint(1))
-
-// 	assert.NoError(t, err)
-// 	mockRepo.AssertExpectations(t)
-// }
